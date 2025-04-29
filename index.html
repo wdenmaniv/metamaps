@@ -131,8 +131,10 @@
         };
 
         if (currentPlaceType) {
-          request.keyword = currentPlaceType; // 🛠 Use keyword for all categories now
-        }
+          request.keyword = currentPlaceType;
+        } else {
+            request.keyword = ".";
+        } 
 
         const service = new google.maps.places.PlacesService(map);
 
