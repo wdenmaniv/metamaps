@@ -53,13 +53,14 @@
         font-size: 14px;
         cursor: pointer;
         position: absolute;
-        top: 70px;
+        top: 80px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 10;
         box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         border-radius: 4px;
-        transition: opacity 0.5s ease;
+        opacity: 1;
+        transition: opacity 0.3s ease;
       }
       #address-search {
         display: flex;
@@ -81,13 +82,11 @@
       }
     </style>
   </head>
-
   <body>
     <div id="address-search">
       <input type="text" id="address" placeholder="Enter an address..." />
       <button onclick="goToAddress()">Go</button>
     </div>
-
     <div id="filters">
       <button onclick="updatePlaces('', this)">🧭 All</button>
       <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
@@ -95,7 +94,6 @@
       <button onclick="updatePlaces('park', this)">🌳 Parks</button>
       <button onclick="updatePlaces('tourist_attraction', this)">📸 Attractions</button>
     </div>
-
     <div id="map"></div>
     <div id="places-list"></div>
     <div id="redo-search" onclick="redoSearch()">🔄 Redo Search in This Area</div>
@@ -103,18 +101,18 @@
     <script>
       let map;
       let markers = [];
+      let allResults = [];
+      let visibleCount = 0;
       let currentPlaceType = '';
       let currentCenter;
-      let redoTimeout;
 
       function updatePlaces(newType, button) {
         currentPlaceType = newType;
         if (!currentCenter) currentCenter = map.getCenter();
         runPlaceSearch(currentCenter);
 
-        document.querySelectorAll("#filters button").forEach(btn =>
-          btn.classList.remove("active-filter")
-        );
+        const allButtons = document.querySelectorAll("#filters button");
+        allButtons.forEach((btn) => btn.classList.remove("active-filter"));
         button.classList.add("active-filter");
       }
 
@@ -125,13 +123,15 @@
           lng: newCenter.lng(),
         };
         currentCenter = userLocation;
-        document.getElementById("redo-search").style.display = "none";
         runPlaceSearch(userLocation);
+        document.getElementById("redo-search").style.opacity = 0;
       }
 
       function runPlaceSearch(userLocation) {
         markers.forEach((marker) => marker.setMap(null));
         markers = [];
+        allResults = [];
+        visibleCount = 0;
 
         const request = {
           location: userLocation,
@@ -143,38 +143,58 @@
         const service = new google.maps.places.PlacesService(map);
         service.nearbySearch(request, (results, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
-            const listContainer = document.getElementById("places-list");
-            listContainer.innerHTML = "";
-
-            results
-              .sort((a, b) => b.user_ratings_total - a.user_ratings_total)
-              .slice(0, 5)
-              .forEach((place) => {
-                const marker = new google.maps.Marker({
-                  map,
-                  position: place.geometry.location,
-                  title: `${place.name}`,
-                });
-                markers.push(marker);
-
-                const infoWindow = new google.maps.InfoWindow({
-                  content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
-                });
-
-                marker.addListener("click", () => {
-                  infoWindow.open(map, marker);
-                });
-
-                const placeDiv = document.createElement("div");
-                placeDiv.style.padding = "10px";
-                placeDiv.style.borderBottom = "1px solid #ccc";
-                placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
-                listContainer.appendChild(placeDiv);
-              });
+            allResults = results.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
+            displayNextResults();
           } else {
             console.warn("No places found or bad status");
           }
         });
+      }
+
+      function displayNextResults() {
+        const listContainer = document.getElementById("places-list");
+        if (visibleCount === 0) listContainer.innerHTML = "";
+
+        const slice = allResults.slice(visibleCount, visibleCount + 5);
+        slice.forEach((place) => {
+          const marker = new google.maps.Marker({
+            map,
+            position: place.geometry.location,
+            title: `${place.name}`,
+          });
+          markers.push(marker);
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
+          });
+
+          marker.addListener("click", () => {
+            infoWindow.open(map, marker);
+          });
+
+          const placeDiv = document.createElement("div");
+          placeDiv.style.padding = "10px";
+          placeDiv.style.borderBottom = "1px solid #ccc";
+          placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
+          listContainer.appendChild(placeDiv);
+        });
+
+        visibleCount += 5;
+
+        const existingBtn = document.getElementById("show-more-btn");
+        if (visibleCount < allResults.length) {
+          if (!existingBtn) {
+            const btn = document.createElement("button");
+            btn.id = "show-more-btn";
+            btn.textContent = "Show More";
+            btn.style.margin = "10px auto";
+            btn.style.display = "block";
+            btn.onclick = displayNextResults;
+            listContainer.appendChild(btn);
+          }
+        } else if (existingBtn) {
+          existingBtn.remove();
+        }
       }
 
       function goToAddress() {
@@ -225,15 +245,14 @@
               const userInfoWindow = new google.maps.InfoWindow({
                 content: "<strong>You are here</strong>",
               });
-
               userMarker.addListener("click", () => {
                 userInfoWindow.open(map, userMarker);
               });
-
               runPlaceSearch(userLocation);
             },
             () => {
               console.warn("Geolocation failed — using default.");
+              currentCenter = defaultLocation;
               runPlaceSearch(defaultLocation);
             }
           );
@@ -242,23 +261,19 @@
           runPlaceSearch(defaultLocation);
         }
 
-        google.maps.event.addListener(map, "dragend", showRedoSearch);
-        google.maps.event.addListener(map, "zoom_changed", showRedoSearch);
-      }
+        google.maps.event.addListener(map, "dragend", () => {
+          const redo = document.getElementById("redo-search");
+          redo.style.display = "block";
+          redo.style.opacity = 1;
+        });
 
-      function showRedoSearch() {
-        const redo = document.getElementById("redo-search");
-        redo.style.display = "block";
-        redo.style.opacity = "1";
-
-        clearTimeout(redoTimeout);
-        redoTimeout = setTimeout(() => {
-          redo.style.opacity = "0";
-          setTimeout(() => (redo.style.display = "none"), 500);
-        }, 5000);
+        google.maps.event.addListener(map, "zoom_changed", () => {
+          const redo = document.getElementById("redo-search");
+          redo.style.display = "block";
+          redo.style.opacity = 1;
+        });
       }
     </script>
-
     <script
       async
       defer
