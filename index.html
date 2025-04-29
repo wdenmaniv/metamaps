@@ -5,69 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MetaMaps MVP</title>
     <style>
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-      #address-search, #filters {
-        display: flex;
-        padding: 10px;
-        background: #fff;
-        border-bottom: 1px solid #ccc;
-        font-family: sans-serif;
-        gap: 8px;
-      }
-      #filters {
-        justify-content: space-around;
-      }
-      #filters button, #address-search button {
-        padding: 8px 12px;
-        font-size: 14px;
-        border: 1px solid #aaa;
-        border-radius: 5px;
-        background: #f8f8f8;
-        cursor: pointer;
-      }
-      #filters button:hover, #address-search button:hover {
-        background: #eaeaea;
-      }
-      #filters button.active-filter {
-        background-color: #4285f4;
-        color: white;
-        border-color: #4285f4;
-      }
-      #address-search input {
-        flex: 1;
-        padding: 8px;
-        font-size: 14px;
-      }
-      #map {
-        height: 60%;
-        width: 100%;
-      }
-      #places-list {
-        height: 30%;
-        overflow-y: auto;
-        padding: 10px;
-        font-family: sans-serif;
-      }
-      #redo-search {
-        display: none;
-        background: #fff;
-        border: 1px solid #ccc;
-        padding: 8px 12px;
-        font-family: sans-serif;
-        font-size: 14px;
-        cursor: pointer;
-        position: absolute;
-        top: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        border-radius: 4px;
-      }
+      html, body { height: 100%; margin: 0; padding: 0; }
+      #filters, #address-search { display: flex; justify-content: space-around; padding: 10px; background: #fff; border-bottom: 1px solid #ccc; font-family: sans-serif; }
+      #filters button, #address-search button { padding: 8px 12px; font-size: 14px; border: 1px solid #aaa; border-radius: 5px; background: #f8f8f8; cursor: pointer; }
+      #filters button:hover, #address-search button:hover { background: #eaeaea; }
+      #filters button.active-filter { background-color: #4285f4; color: white; border-color: #4285f4; }
+      #map { height: 60%; width: 100%; }
+      #places-list { height: 30%; overflow-y: auto; padding: 10px; font-family: sans-serif; }
+      #redo-search { display: none; background: #fff; border: 1px solid #ccc; padding: 8px 12px; font-family: sans-serif; font-size: 14px; cursor: pointer; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border-radius: 4px; }
+      #address-search input { flex: 1; padding: 8px; font-size: 14px; }
     </style>
   </head>
 
@@ -78,7 +24,7 @@
     </div>
 
     <div id="filters">
-      <button onclick="updatePlaces('', this)">🧭 All</button>
+      <button onclick="updatePlaces('all', this)">✭ All</button>
       <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
       <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
       <button onclick="updatePlaces('park', this)">🌳 Parks</button>
@@ -92,88 +38,108 @@
     <script>
       let map;
       let markers = [];
-      let currentPlaceType = ''; 
+      let currentPlaceType = 'all';
       let currentCenter;
+
+      const ALL_KEYWORDS = [
+        "restaurant", "cafe", "bar", "night club", "hotel", "park",
+        "tourist attraction", "viewpoint", "beach", "shopping mall",
+        "market", "museum", "stadium", "sports complex", "historic site",
+        "landmark", "hiking trail", "natural feature", "recreation",
+        "recreation center", "library"
+      ];
 
       function updatePlaces(newType, button) {
         currentPlaceType = newType;
-
-        if (!currentCenter) {
-          currentCenter = map.getCenter(); 
-        }
+        if (!currentCenter) { currentCenter = map.getCenter(); }
         runPlaceSearch(currentCenter);
 
-        const allButtons = document.querySelectorAll("#filters button");
-        allButtons.forEach((btn) => btn.classList.remove("active-filter"));
+        document.querySelectorAll("#filters button").forEach(btn => btn.classList.remove("active-filter"));
         button.classList.add("active-filter");
       }
 
       function redoSearch() {
-        const newCenter = map.getCenter();
-        const userLocation = {
-          lat: newCenter.lat(),
-          lng: newCenter.lng(),
-        };
-
-        currentCenter = userLocation;
+        currentCenter = map.getCenter();
         document.getElementById("redo-search").style.display = "none";
-        runPlaceSearch(userLocation);
+        runPlaceSearch(currentCenter);
       }
 
       function runPlaceSearch(userLocation) {
-        markers.forEach((marker) => marker.setMap(null));
+        markers.forEach(marker => marker.setMap(null));
         markers = [];
 
-        const request = {
-          location: userLocation,
-          radius: 1500,
-          rankBy: google.maps.places.RankBy.PROMINENCE,
-        };
-
-        if (currentPlaceType) {
-          request.keyword = currentPlaceType;
-        } else {
-            request.keyword = ".";
-        } 
-
         const service = new google.maps.places.PlacesService(map);
+        const promises = [];
 
-        service.nearbySearch(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
-            const listContainer = document.getElementById("places-list");
-            listContainer.innerHTML = "";
-
-            results
-              .sort((a, b) => b.user_ratings_total - a.user_ratings_total)
-              .slice(0, 5)
-              .forEach((place) => {
-                const marker = new google.maps.Marker({
-                  map,
-                  position: place.geometry.location,
-                  title: place.name,
-                });
-
-                markers.push(marker); 
-
-                const infoWindow = new google.maps.InfoWindow({
-                  content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
-                });
-
-                marker.addListener("click", () => {
-                  infoWindow.open(map, marker);
-                });
-
-                const placeDiv = document.createElement("div");
-                placeDiv.style.padding = "10px";
-                placeDiv.style.borderBottom = "1px solid #ccc";
-                placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
-                listContainer.appendChild(placeDiv);
+        if (currentPlaceType === 'all') {
+          ALL_KEYWORDS.forEach(keyword => {
+            promises.push(new Promise((resolve) => {
+              service.nearbySearch({
+                location: userLocation,
+                radius: 1500,
+                keyword
+              }, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                  resolve(results);
+                } else {
+                  resolve([]);
+                }
               });
+            }));
+          });
 
-            console.log("Top Places:", results.slice(0, 5));
-          } else {
-            console.warn("No places found or bad status");
-          }
+          Promise.all(promises).then(allResults => {
+            const merged = allResults.flat();
+            const seen = new Map();
+            const unique = merged.filter(place => {
+              if (seen.has(place.place_id)) return false;
+              seen.set(place.place_id, true);
+              return true;
+            });
+            displayPlaces(unique);
+          });
+
+        } else {
+          service.nearbySearch({
+            location: userLocation,
+            radius: 1500,
+            keyword: currentPlaceType
+          }, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK) {
+              displayPlaces(results);
+            } else {
+              console.warn("No places found or bad status");
+            }
+          });
+        }
+      }
+
+      function displayPlaces(results) {
+        const listContainer = document.getElementById("places-list");
+        listContainer.innerHTML = "";
+
+        results.sort((a, b) => b.user_ratings_total - a.user_ratings_total)
+               .slice(0, 5)
+               .forEach(place => {
+          const marker = new google.maps.Marker({
+            map,
+            position: place.geometry.location,
+            title: place.name
+          });
+
+          markers.push(marker);
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`
+          });
+
+          marker.addListener("click", () => infoWindow.open(map, marker));
+
+          const placeDiv = document.createElement("div");
+          placeDiv.style.padding = "10px";
+          placeDiv.style.borderBottom = "1px solid #ccc";
+          placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
+          listContainer.appendChild(placeDiv);
         });
       }
 
@@ -187,14 +153,8 @@
             const location = results[0].geometry.location;
             map.setCenter(location);
             map.setZoom(14);
-
-            const userLocation = {
-              lat: location.lat(),
-              lng: location.lng(),
-            };
-            
-            currentCenter = userLocation;
-            runPlaceSearch(userLocation);
+            currentCenter = { lat: location.lat(), lng: location.lng() };
+            runPlaceSearch(currentCenter);
           } else {
             alert("Address not found.");
           }
@@ -203,62 +163,23 @@
 
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
-
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: defaultLocation,
-          zoom: 14,
-        });
-
+        map = new google.maps.Map(document.getElementById("map"), { center: defaultLocation, zoom: 14 });
         currentCenter = defaultLocation;
 
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              };
-
-              map.setCenter(userLocation);
-              currentCenter = userLocation;
-
-              const userMarker = new google.maps.Marker({
-                position: userLocation,
-                map,
-                title: "You are here",
-              });
-
-              const userInfoWindow = new google.maps.InfoWindow({
-                content: "<strong>You are here</strong>",
-              });
-
-              userMarker.addListener("click", () => {
-                userInfoWindow.open(map, userMarker);
-              });
-
-              runPlaceSearch(userLocation);
-            },
-            () => {
-              console.warn("Geolocation failed — using default.");
-              currentCenter = defaultLocation;
-              runPlaceSearch(defaultLocation);
-            }
-          );
+          navigator.geolocation.getCurrentPosition((position) => {
+            currentCenter = { lat: position.coords.latitude, lng: position.coords.longitude };
+            map.setCenter(currentCenter);
+            runPlaceSearch(currentCenter);
+          }, () => runPlaceSearch(defaultLocation));
         } else {
-          console.warn("Geolocation not supported.");
           runPlaceSearch(defaultLocation);
         }
 
-        google.maps.event.addListener(map, "dragend", () => {
-          document.getElementById("redo-search").style.display = "block";
-        });
+        google.maps.event.addListener(map, "dragend", () => document.getElementById("redo-search").style.display = "block");
       }
     </script>
 
-    <script
-      async
-      defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places&callback=initMap">
-    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places&callback=initMap"></script>
   </body>
 </html>
