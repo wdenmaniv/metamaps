@@ -21,18 +21,60 @@
         padding: 10px;
         font-family: sans-serif;
       }
+      #filters {
+        display: flex;
+        justify-content: space-around;
+        padding: 10px;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+        font-family: sans-serif;
+      }
+        #filters button {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        background: #f8f8f8;
+        cursor: pointer;
+      }
+        #filters button:hover {
+        background: #eaeaea;
+      }
+        #map {
+        height: 60%;
+      }
+        #places-list {
+        height: 30%;
+        overflow-y: auto;
+        padding: 10px;
+        font-family: sans-serif;
+      }
+
     </style>
   </head>
   <body>
+    <div id="filters">
+        <button onclick="updatePlaces('restaurant')">🍽 Restaurants</button>
+        <button onclick="updatePlaces('cafe')">☕ Cafés</button>
+        <button onclick="updatePlaces('park')">🌳 Parks</button>
+        <button onclick="updatePlaces('tourist_attraction')">📸 Attractions</button>
+    </div>
     <div id="map"></div>
     <div id="places-list"></div>
+      
   
     <script>
       let map;
+      let currentPlaceType = "restaurant";
   
+      function updatePlaces(newType) {
+         currentPlaceType = newType;
+         initMap(); // re-runs geolocation and search with new type
+        }
+
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
-  
+
         map = new google.maps.Map(document.getElementById("map"), {
           center: defaultLocation,
           zoom: 14,
@@ -68,7 +110,7 @@
                 {
                   location: userLocation,
                   radius: 1500,
-                  type: "restaurant",
+                  type: currentPlaceType,
                   rankBy: google.maps.places.RankBy.PROMINENCE,
                 },
                 (results, status) => {
