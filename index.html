@@ -89,6 +89,7 @@
       </div>
 
     <div id="filters">
+      <button onclick="updatePlaces('', this)">🧭 All</button>
       <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
       <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
       <button onclick="updatePlaces('park', this)">🌳 Parks</button>
@@ -102,7 +103,7 @@
     <script>
       let map;
       let markers = [];
-      let currentPlaceType = "restaurant";
+      let currentPlaceType = ''; 
       let currentCenter;
 
 
@@ -135,6 +136,16 @@
       function runPlaceSearch(userLocation) {
         markers.forEach((marker) => marker.setMap(null));
         markers = [];
+
+        const request = {
+            location: userLocation,
+            radius: 1500,
+            rankBy: google.maps.places.RankBy.PROMINENCE,
+            };
+
+            if (currentPlaceType) {
+            request.type = currentPlaceType;
+            }
 
         const service = new google.maps.places.PlacesService(map);
         service.nearbySearch(
