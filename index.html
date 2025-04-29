@@ -11,25 +11,33 @@
         padding: 0;
       }
       #map {
-        height: 100%;
+        height:70%;
         width: 100%;
+
+      }
+      #places-list {
+        height: 30%;
+        overflow-y: auto;
+        padding: 10px;
+        font-family: sans-serif;
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
-
+    <div id="places-list"></div>
+  
     <script>
       let map;
-
+  
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
-
+  
         map = new google.maps.Map(document.getElementById("map"), {
           center: defaultLocation,
           zoom: 14,
         });
-
+  
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -37,15 +45,15 @@
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
               };
-
+  
               map.setCenter(userLocation);
-
+  
               new google.maps.Marker({
                 position: userLocation,
                 map,
                 title: "You are here",
               });
-
+  
               const service = new google.maps.places.PlacesService(map);
               service.nearbySearch(
                 {
@@ -62,15 +70,35 @@
                     results.sort(
                       (a, b) => b.user_ratings_total - a.user_ratings_total
                     );
-
+  
+                    const listContainer = document.getElementById("places-list");
+                    listContainer.innerHTML = ""; // Clear previous
+  
                     results.slice(0, 5).forEach((place) => {
-                      new google.maps.Marker({
+                      // 📍 Add marker
+                      const marker = new google.maps.Marker({
                         map,
                         position: place.geometry.location,
-                        title: `${place.name} (${place.user_ratings_total} reviews)`,
+                        title: `${place.name}`,
                       });
+  
+                      // 💬 Add info window on click
+                      const infoWindow = new google.maps.InfoWindow({
+                        content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
+                      });
+  
+                      marker.addListener("click", () => {
+                        infoWindow.open(map, marker);
+                      });
+  
+                      // 📝 Add to list view
+                      const placeDiv = document.createElement("div");
+                      placeDiv.style.padding = "10px";
+                      placeDiv.style.borderBottom = "1px solid #ccc";
+                      placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
+                      listContainer.appendChild(placeDiv);
                     });
-
+  
                     console.log("Top Places:", results.slice(0, 5));
                   } else {
                     console.warn("No places found or bad status");
@@ -87,6 +115,7 @@
         }
       }
     </script>
+  
 
     <script
       async
