@@ -1,220 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MetaMaps MVP</title>
-  <style>
-    html, body {
-      height: 100%; margin: 0; padding: 0;
-    }
-    #filters, #address-search, #help-text {
-      background: #fff; font-family: sans-serif;
-    }
-    #filters {
-      display: flex; justify-content: space-around; padding: 10px; border-bottom: 1px solid #ccc;
-    }
-    #filters button {
-      padding: 8px 12px; font-size: 14px; border: 1px solid #aaa; border-radius: 5px; background: #f8f8f8; cursor: pointer;
-    }
-    #filters button:hover { background: #eaeaea; }
-    #filters button.active-filter { background-color: #4285f4; color: white; border-color: #4285f4; }
-    #map { height: 60%; width: 100%; }
-    #places-list { height: 30%; overflow-y: auto; padding: 10px; font-family: sans-serif; }
-    #redo-search {
-      display: none; background: #fff; border: 1px solid #ccc; padding: 8px 12px; font-family: sans-serif; font-size: 14px;
-      cursor: pointer; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 10;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2); border-radius: 4px;
-    }
-    #address-search {
-      display: flex; padding: 10px; gap: 8px; border-bottom: 1px solid #ccc;
-    }
-    #address-search input { flex: 1; padding: 8px; font-size: 14px; }
-    #address-search button { padding: 8px 12px; font-size: 14px; cursor: pointer; }
-    #help-text { padding: 10px; font-size: 14px; color: #555; }
-    #loading { display: none; text-align: center; padding: 10px; font-size: 16px; }
-    #load-more { display: none; width: 100%; padding: 10px; font-size: 16px; }
-
-    @media (max-width: 600px) {
-      #filters { flex-wrap: wrap; justify-content: center; gap: 8px; }
-      #map { height: 50%; }
-      #places-list { height: 40%; }
-      #redo-search { top: 100px; }
-    }
-  </style>
-</head>
-
-<body>
-  <div id="address-search">
-    <input type="text" id="address" placeholder="Enter an address..." />
-    <button onclick="goToAddress()">Go</button>
-  </div>
-  <div id="help-text">🧭 Enter a city or drag the map to explore! Click a place for ratings. Filters help narrow down results.</div>
-  <div id="filters">
-    <button onclick="updatePlaces('', this)">🧭 All</button>
-    <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
-    <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
-    <button onclick="updatePlaces('park', this)">🌳 Parks</button>
-    <button onclick="updatePlaces('tourist_attraction', this)">📸 Attractions</button>
-  </div>
-  <div id="map"></div>
-  <div id="places-list"></div>
-  <div id="redo-search" onclick="redoSearch()">🔄 Redo Search in This Area</div>
-  <div id="loading">Loading...</div>
-  <button id="load-more">Load More</button>
-
-<script>
-let map;
-let markers = [];
-let currentPlaceType = '';
-let currentCenter;
-let allResults = [];
-const ICONS = {
-  restaurant: "https://maps.google.com/mapfiles/kml/shapes/dining.png",
-  cafe: "https://maps.google.com/mapfiles/kml/shapes/coffee.png",
-  park: "https://maps.google.com/mapfiles/kml/shapes/parks.png",
-  tourist_attraction: "https://maps.google.com/mapfiles/kml/shapes/info-i_maps.png",
-  default: "https://maps.google.com/mapfiles/kml/shapes/poi.png",
-};
-
-function updatePlaces(newType, button) {
-  currentPlaceType = newType;
-  if (!currentCenter) currentCenter = map.getCenter();
-  runPlaceSearch(currentCenter);
-  const allButtons = document.querySelectorAll("#filters button");
-  allButtons.forEach((btn) => btn.classList.remove("active-filter"));
-  button.classList.add("active-filter");
-}
-
-function redoSearch() {
-  const newCenter = map.getCenter();
-  currentCenter = { lat: newCenter.lat(), lng: newCenter.lng() };
-  document.getElementById("redo-search").style.display = "none";
-  runPlaceSearch(currentCenter);
-}
-
-function runPlaceSearch(userLocation) {
-  markers.forEach(marker => marker.setMap(null));
-  markers = [];
-
-  document.getElementById("loading").style.display = "block";
-  document.getElementById("load-more").style.display = "none";
-  document.getElementById("places-list").innerHTML = "";
-
-  const service = new google.maps.places.PlacesService(map);
-  const request = {
-    location: userLocation,
-    radius: 1500,
-    rankBy: google.maps.places.RankBy.PROMINENCE,
-  };
-  if (currentPlaceType) request.type = currentPlaceType;
-  else request.keyword = "establishment";
-
-  service.nearbySearch(request, (results, status) => {
-    document.getElementById("loading").style.display = "none";
-    if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
-      allResults = results.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
-      renderMoreResults();
-      if (allResults.length > 0) document.getElementById("load-more").style.display = "block";
-    } else {
-      const listContainer = document.getElementById("places-list");
-      listContainer.innerHTML = "<p>No places found nearby.</p>";
-    }
-  });
-}
-
-function renderMoreResults() {
-  const listContainer = document.getElementById("places-list");
-  const nextResults = allResults.splice(0, 5);
-  nextResults.forEach((place) => {
-    const marker = new google.maps.Marker({
-      map,
-      position: place.geometry.location,
-      title: place.name,
-    });
-    markers.push(marker);
-
-    const infoWindow = new google.maps.InfoWindow({
-      content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`
-    });
-    marker.addListener("click", () => infoWindow.open(map, marker));
-
-    const placeDiv = document.createElement("div");
-    placeDiv.style.padding = "10px";
-    placeDiv.style.borderBottom = "1px solid #ccc";
-    placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
-    listContainer.appendChild(placeDiv);
-  });
-  if (allResults.length === 0) document.getElementById("load-more").style.display = "none";
-}
-
-function goToAddress() {
-  const address = document.getElementById("address").value;
-  if (!address) return;
-  const geocoder = new google.maps.Geocoder();
-  geocoder.geocode({ address }, (results, status) => {
-    if (status === "OK" && results[0]) {
-      const location = results[0].geometry.location;
-      map.setCenter(location);
-      map.setZoom(14);
-      currentCenter = { lat: location.lat(), lng: location.lng() };
-      runPlaceSearch(currentCenter);
-    } else {
-      alert("Address not found.");
-    }
-  });
-}
-
-function initMap() {
-  const defaultLocation = { lat: 37.7749, lng: -122.4194 };
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: defaultLocation,
-    zoom: 14,
-  });
-
-  currentCenter = defaultLocation;
-
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        map.setCenter(userLocation);
-        currentCenter = userLocation;
-
-        const userMarker = new google.maps.Marker({
-          position: userLocation,
-          map,
-          title: "You are here",
-        });
-
-        const userInfoWindow = new google.maps.InfoWindow({
-          content: "<strong>You are here</strong>",
-        });
-        userMarker.addListener("click", () => userInfoWindow.open(map, userMarker));
-
-        runPlaceSearch(userLocation);
-      },
-      () => {
-        console.warn("Geolocation failed — using default.");
-        runPlaceSearch(defaultLocation);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MetaMaps MVP</title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
       }
-    );
-  } else {
-    console.warn("Geolocation not supported.");
-    runPlaceSearch(defaultLocation);
-  }
+      #address-search, #filters {
+        display: flex;
+        padding: 10px;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+        font-family: sans-serif;
+        gap: 8px;
+      }
+      #filters {
+        justify-content: space-around;
+      }
+      #filters button, #address-search button {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        background: #f8f8f8;
+        cursor: pointer;
+      }
+      #filters button:hover, #address-search button:hover {
+        background: #eaeaea;
+      }
+      #filters button.active-filter {
+        background-color: #4285f4;
+        color: white;
+        border-color: #4285f4;
+      }
+      #address-search input {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+      }
+      #map {
+        height: 60%;
+        width: 100%;
+      }
+      #places-list {
+        height: 30%;
+        overflow-y: auto;
+        padding: 10px;
+        font-family: sans-serif;
+      }
+      #redo-search {
+        display: none;
+        background: #fff;
+        border: 1px solid #ccc;
+        padding: 8px 12px;
+        font-family: sans-serif;
+        font-size: 14px;
+        cursor: pointer;
+        position: absolute;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
 
-  google.maps.event.addListener(map, "dragend", () => {
-    document.getElementById("redo-search").style.display = "block";
-  });
-}
+  <body>
+    <div id="address-search">
+      <input type="text" id="address" placeholder="Enter an address..." />
+      <button onclick="goToAddress()">Go</button>
+    </div>
 
-document.getElementById("load-more").addEventListener("click", renderMoreResults);
-</script>
+    <div id="filters">
+      <button onclick="updatePlaces('', this)">🧭 All</button>
+      <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
+      <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
+      <button onclick="updatePlaces('park', this)">🌳 Parks</button>
+      <button onclick="updatePlaces('tourist attraction', this)">📸 Attractions</button>
+    </div>
 
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places&callback=initMap"></script>
-</body>
+    <div id="map"></div>
+    <div id="places-list"></div>
+    <div id="redo-search" onclick="redoSearch()">🔄 Redo Search in This Area</div>
+
+    <script>
+      let map;
+      let markers = [];
+      let currentPlaceType = ''; 
+      let currentCenter;
+
+      function updatePlaces(newType, button) {
+        currentPlaceType = newType;
+
+        if (!currentCenter) {
+          currentCenter = map.getCenter(); 
+        }
+        runPlaceSearch(currentCenter);
+
+        const allButtons = document.querySelectorAll("#filters button");
+        allButtons.forEach((btn) => btn.classList.remove("active-filter"));
+        button.classList.add("active-filter");
+      }
+
+      function redoSearch() {
+        const newCenter = map.getCenter();
+        const userLocation = {
+          lat: newCenter.lat(),
+          lng: newCenter.lng(),
+        };
+
+        currentCenter = userLocation;
+        document.getElementById("redo-search").style.display = "none";
+        runPlaceSearch(userLocation);
+      }
+
+      function runPlaceSearch(userLocation) {
+        markers.forEach((marker) => marker.setMap(null));
+        markers = [];
+
+        const request = {
+          location: userLocation,
+          radius: 1500,
+          rankBy: google.maps.places.RankBy.PROMINENCE,
+        };
+
+        if (currentPlaceType) {
+          request.keyword = currentPlaceType; // 🛠 Use keyword for all categories now
+        }
+
+        const service = new google.maps.places.PlacesService(map);
+
+        service.nearbySearch(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
+            const listContainer = document.getElementById("places-list");
+            listContainer.innerHTML = "";
+
+            results
+              .sort((a, b) => b.user_ratings_total - a.user_ratings_total)
+              .slice(0, 5)
+              .forEach((place) => {
+                const marker = new google.maps.Marker({
+                  map,
+                  position: place.geometry.location,
+                  title: place.name,
+                });
+
+                markers.push(marker); 
+
+                const infoWindow = new google.maps.InfoWindow({
+                  content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
+                });
+
+                marker.addListener("click", () => {
+                  infoWindow.open(map, marker);
+                });
+
+                const placeDiv = document.createElement("div");
+                placeDiv.style.padding = "10px";
+                placeDiv.style.borderBottom = "1px solid #ccc";
+                placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
+                listContainer.appendChild(placeDiv);
+              });
+
+            console.log("Top Places:", results.slice(0, 5));
+          } else {
+            console.warn("No places found or bad status");
+          }
+        });
+      }
+
+      function goToAddress() {
+        const address = document.getElementById("address").value;
+        if (!address) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            const location = results[0].geometry.location;
+            map.setCenter(location);
+            map.setZoom(14);
+
+            const userLocation = {
+              lat: location.lat(),
+              lng: location.lng(),
+            };
+            
+            currentCenter = userLocation;
+            runPlaceSearch(userLocation);
+          } else {
+            alert("Address not found.");
+          }
+        });
+      }
+
+      function initMap() {
+        const defaultLocation = { lat: 37.7749, lng: -122.4194 };
+
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: defaultLocation,
+          zoom: 14,
+        });
+
+        currentCenter = defaultLocation;
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+
+              map.setCenter(userLocation);
+              currentCenter = userLocation;
+
+              const userMarker = new google.maps.Marker({
+                position: userLocation,
+                map,
+                title: "You are here",
+              });
+
+              const userInfoWindow = new google.maps.InfoWindow({
+                content: "<strong>You are here</strong>",
+              });
+
+              userMarker.addListener("click", () => {
+                userInfoWindow.open(map, userMarker);
+              });
+
+              runPlaceSearch(userLocation);
+            },
+            () => {
+              console.warn("Geolocation failed — using default.");
+              currentCenter = defaultLocation;
+              runPlaceSearch(defaultLocation);
+            }
+          );
+        } else {
+          console.warn("Geolocation not supported.");
+          runPlaceSearch(defaultLocation);
+        }
+
+        google.maps.event.addListener(map, "dragend", () => {
+          document.getElementById("redo-search").style.display = "block";
+        });
+      }
+    </script>
+
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places&callback=initMap">
+    </script>
+  </body>
 </html>
