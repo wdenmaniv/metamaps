@@ -109,9 +109,10 @@
       function updatePlaces(newType, button) {
         currentPlaceType = newType;
 
-        if (currentCenter) {
-            runPlaceSearch(currentCenter);
+        if (!currentCenter) {
+        currentCenter = map.getCenter(); 
         }
+            runPlaceSearch(currentCenter);
 
         const allButtons = document.querySelectorAll("#filters button");
         allButtons.forEach((btn) => btn.classList.remove("active-filter"));
@@ -192,6 +193,7 @@
             if (status === "OK" && results[0]) {
             const location = results[0].geometry.location;
             map.setCenter(location);
+            map.setZoom(14);
 
             const userLocation = {
                 lat: location.lat(),
@@ -246,6 +248,7 @@
             },
             () => {
               console.warn("Geolocation failed — using default.");
+              currentCenter = defaultLocation;
               runPlaceSearch(defaultLocation);
             }
           );
