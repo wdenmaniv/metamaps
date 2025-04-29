@@ -48,11 +48,20 @@
   
               map.setCenter(userLocation);
   
-              new google.maps.Marker({
+              const userMarker = new google.maps.Marker({
                 position: userLocation,
                 map,
                 title: "You are here",
               });
+
+              const userInfoWindow = new google.maps.InfoWindow({
+              content: "<strong>You are here</strong>",
+              });
+
+              userMarker.addListener("click", () => {
+              userInfoWindow.open(map, userMarker);
+              });
+
   
               const service = new google.maps.places.PlacesService(map);
               service.nearbySearch(
