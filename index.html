@@ -40,6 +40,11 @@
         #filters button:hover {
         background: #eaeaea;
       }
+        #filters button.active-filter {
+        background-color: #4285f4;
+        color: white;
+        border-color: #4285f4;
+      }
         #map {
         height: 60%;
       }
@@ -54,11 +59,11 @@
   </head>
   <body>
     <div id="filters">
-        <button onclick="updatePlaces('restaurant')">🍽 Restaurants</button>
-        <button onclick="updatePlaces('cafe')">☕ Cafés</button>
-        <button onclick="updatePlaces('park')">🌳 Parks</button>
-        <button onclick="updatePlaces('tourist_attraction')">📸 Attractions</button>
-    </div>
+        <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
+        <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
+        <button onclick="updatePlaces('park', this)">🌳 Parks</button>
+        <button onclick="updatePlaces('tourist_attraction', this)">📸 Attractions</button>
+      </div>
     <div id="map"></div>
     <div id="places-list"></div>
       
@@ -67,9 +72,14 @@
       let map;
       let currentPlaceType = "restaurant";
   
-      function updatePlaces(newType) {
+      function updatePlaces(newType, button) {
          currentPlaceType = newType;
-         initMap(); // re-runs geolocation and search with new type
+         initMap(); // re-runs geolocation and search
+
+           // Highlight active button
+      const allButtons = document.querySelectorAll("#filters button");
+      allButtons.forEach((btn) => btn.classList.remove("active-filter"));
+      button.classList.add("active-filter");
         }
 
       function initMap() {
