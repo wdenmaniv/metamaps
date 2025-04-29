@@ -143,19 +143,16 @@
             rankBy: google.maps.places.RankBy.PROMINENCE,
             };
 
-            if (currentPlaceType) {
-            request.type = currentPlaceType;
-            }
+        if (currentPlaceType) {
+         request.type = currentPlaceType;
+        } else {
+         request.keyword = "establishment";
+        }
 
+    
         const service = new google.maps.places.PlacesService(map);
-        service.nearbySearch(
-          {
-            location: userLocation,
-            radius: 1500,
-            type: currentPlaceType,
-            rankBy: google.maps.places.RankBy.PROMINENCE,
-          },
-          (results, status) => {
+
+        service.nearbySearch(request, (results, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
               const listContainer = document.getElementById("places-list");
               listContainer.innerHTML = "";
