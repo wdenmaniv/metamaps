@@ -103,7 +103,7 @@
       function runPlaceSearch(userLocation) {
         markers.forEach((marker) => marker.setMap(null));
         markers = [];
-        
+
         const service = new google.maps.places.PlacesService(map);
         service.nearbySearch(
           {
@@ -127,6 +127,8 @@
                     title: `${place.name}`,
                   });
 
+                  markers.push(marker); 
+                  
                   const infoWindow = new google.maps.InfoWindow({
                     content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
                   });
