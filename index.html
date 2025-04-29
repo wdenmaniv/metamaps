@@ -60,10 +60,34 @@
         box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         border-radius: 4px;
       }
+      #address-search {
+        display: flex;
+        padding: 10px;
+        gap: 8px;
+        font-family: sans-serif;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+      }
+      #address-search input {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+      }
+      #address-search button {
+        padding: 8px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
     </style>
   </head>
 
   <body>
+    <div id="address-search">
+        <input type="text" id="address" placeholder="Enter an address..." />
+        <button onclick="goToAddress()">Go</button>
+      </div>
+
     <div id="filters">
       <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
       <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
@@ -128,7 +152,7 @@
                   });
 
                   markers.push(marker); 
-                  
+
                   const infoWindow = new google.maps.InfoWindow({
                     content: `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`,
                   });
@@ -151,6 +175,29 @@
           }
         );
       }
+
+      function goToAddress() {
+        const address = document.getElementById("address").value;
+        if (!address) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address }, (results, status) => {
+            if (status === "OK" && results[0]) {
+            const location = results[0].geometry.location;
+            map.setCenter(location);
+
+            const userLocation = {
+                lat: location.lat(),
+                lng: location.lng(),
+            };
+
+            runPlaceSearch(userLocation);
+            } else {
+            alert("Address not found.");
+            }
+        });
+        }
+
 
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
