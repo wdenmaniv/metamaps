@@ -226,31 +226,51 @@
         visibleCount = 0;
 
         const bounds = map.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const gridRows = 3;
+        const gridCols = 3;
 
-        const request = {
-          bounds: bounds,
-          query: currentPlaceType || "top places",
-        };
+        const latStep = (ne.lat() - sw.lat()) / (gridRows - 1);
+        const lngStep = (ne.lng() - sw.lng()) / (gridCols - 1);
 
-        const service = new google.maps.places.PlacesService(map);
+        let completedCalls = 0;
+        const totalCalls = gridRows * gridCols;
+        const uniquePlaces = new Map();
 
-        function handleResults(results, status, pagination) {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            allResults = allResults.concat(results);
+        for (let i = 0; i < gridRows; i++) {
+          for (let j = 0; j < gridCols; j++) {
+            const lat = sw.lat() + latStep * i;
+            const lng = sw.lng() + lngStep * j;
+            const location = new google.maps.LatLng(lat, lng);
 
-            if (pagination && pagination.hasNextPage) {
-              setTimeout(() => pagination.nextPage(), 1000); // Google requires delay
-            } else {
-              // All results collected — sort by review count
-              allResults = allResults.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
-              displayNextResults();
-            }
-          } else {
-            console.warn("⚠️ No places found or bad status:", status);
+            const request = {
+              location,
+              radius: 1500, // ~1.5km per grid cell — adjust as needed
+              keyword: currentPlaceType || "top places"
+            };
+
+            const service = new google.maps.places.PlacesService(map);
+            service.nearbySearch(request, (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                results.forEach((place) => {
+                  if (!uniquePlaces.has(place.place_id)) {
+                    uniquePlaces.set(place.place_id, place);
+                  }
+                });
+              }
+
+              completedCalls++;
+              if (completedCalls === totalCalls) {
+                // All grid cells fetched
+                allResults = Array.from(uniquePlaces.values()).sort(
+                  (a, b) => b.user_ratings_total - a.user_ratings_total
+                );
+                displayNextResults();
+              }
+            });
           }
         }
-
-        service.textSearch(request, handleResults);
       }
 
 
