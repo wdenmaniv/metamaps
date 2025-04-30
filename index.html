@@ -154,26 +154,31 @@
           });
 
           const placeDiv = document.createElement("div");
+          placeDiv.className = "place-entry";
           placeDiv.innerHTML = `
             <strong>${place.name}</strong>
             <span>⭐ ${place.rating} (${place.user_ratings_total} reviews)</span>
           `;
-          listContainer.appendChild(placeDiv);
+
+          const showMoreBtn = document.getElementById("show-more-btn");
+          listContainer.insertBefore(placeDiv, showMoreBtn || null);
         });
 
         visibleCount += 5;
 
-        const existingBtn = document.getElementById("show-more-btn");
+        let showMoreBtn = document.getElementById("show-more-btn");
         if (visibleCount < allResults.length) {
-          if (!existingBtn) {
-            const btn = document.createElement("button");
-            btn.id = "show-more-btn";
-            btn.textContent = "Show More";
-            btn.onclick = displayNextResults;
-            listContainer.appendChild(btn);
+          if (!showMoreBtn) {
+            showMoreBtn = document.createElement("button");
+            showMoreBtn.id = "show-more-btn";
+            showMoreBtn.textContent = "Show More";
+            showMoreBtn.onclick = displayNextResults;
+            showMoreBtn.style.margin = "10px auto";
+            showMoreBtn.style.display = "block";
+            listContainer.appendChild(showMoreBtn);
           }
-        } else if (existingBtn) {
-          existingBtn.remove();
+        } else if (showMoreBtn) {
+          showMoreBtn.remove();
         }
       }
 
@@ -240,6 +245,7 @@
         });
       }
     </script>
+
     <script
       async
       defer
