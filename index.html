@@ -215,15 +215,10 @@
 
 
       function redoSearch() {
-        const newCenter = map.getCenter();
-        const userLocation = {
-          lat: newCenter.lat(),
-          lng: newCenter.lng(),
-        };
-        currentCenter = userLocation;
-        runPlaceSearch(userLocation);
+        runPlaceSearch(); // Uses latest map bounds + keyword
         document.getElementById("redo-search").style.opacity = 0;
       }
+
 
       function runPlaceSearch() {
         markers.forEach((marker) => marker.setMap(null));
@@ -234,6 +229,9 @@
         const bounds = map.getBounds();
         const sw = bounds.getSouthWest();
         const ne = bounds.getNorthEast();
+
+        console.log("Searching bounds:", map.getBounds().toString());
+        console.log("Search keyword:", currentPlaceType);
 
         const request = {
           bounds: {
