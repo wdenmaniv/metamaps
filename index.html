@@ -12,6 +12,7 @@
       <input type="text" id="search-input" placeholder="Try 'pizza', 'bars in Chicago', or 'parks'" />
       <button onclick="runUnifiedSearch()">Search</button>
     </div>
+
     <div id="view-toggle">
       <button onclick="showMap()">Map</button>
       <button onclick="showList()">List</button>
@@ -27,7 +28,7 @@
       let allResults = [];
       let visibleCount = 0;
       let currentPlaceType = '';
-      let currentCenter;
+
 
       function updatePlaces(newType, button) {
         currentPlaceType = newType;
