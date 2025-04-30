@@ -47,6 +47,10 @@ html, body {
   display: block;
 }
 
+#map {
+    display: block !important;
+}  
+
 #places-list {
   height: 30%;
   overflow-y: auto;
@@ -94,6 +98,24 @@ html, body {
   opacity: 1;
   transition: opacity 0.3s ease;
 }
+
+#view-toggle {
+    display: none;
+    justify-content: space-around;
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid #ccc;
+}
+  
+#view-toggle button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #aaa;
+    border-radius: 5px;
+    background: #f8f8f8;
+    cursor: pointer;
+}
+  
 
 @media (max-width: 768px) {
   #map, #places-list {
