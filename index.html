@@ -226,31 +226,33 @@
         visibleCount = 0;
 
         const bounds = map.getBounds();
-        const center = map.getCenter();
-        const ne = bounds.getNorthEast();
-
-        const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
-        console.log("📏 Calculated radius (m):", Math.floor(radius));
-        console.log("📍 Center:", center.toString());
-        console.log("🔑 Keyword:", currentPlaceType || "top places");
 
         const request = {
-          location: center,
-          radius: radius,
-          keyword: currentPlaceType || "top places",
-          rankBy: google.maps.places.RankBy.PROMINENCE,
+          bounds: bounds,
+          query: currentPlaceType || "top places",
         };
 
         const service = new google.maps.places.PlacesService(map);
-        service.nearbySearch(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
-            allResults = results.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
-            displayNextResults();
+
+        function handleResults(results, status, pagination) {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            allResults = allResults.concat(results);
+
+            if (pagination && pagination.hasNextPage) {
+              setTimeout(() => pagination.nextPage(), 1000); // Google requires delay
+            } else {
+              // All results collected — sort by review count
+              allResults = allResults.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
+              displayNextResults();
+            }
           } else {
             console.warn("⚠️ No places found or bad status:", status);
           }
-        });
+        }
+
+        service.textSearch(request, handleResults);
       }
+
 
 
       function displayNextResults() {
