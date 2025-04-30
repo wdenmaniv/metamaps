@@ -138,29 +138,37 @@
         document.getElementById("redo-search").style.opacity = 0;
       }
 
-      function runPlaceSearch(userLocation) {
+      function runPlaceSearch() {
         markers.forEach((marker) => marker.setMap(null));
         markers = [];
         allResults = [];
         visibleCount = 0;
 
+        const bounds = map.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+
         const request = {
-          location: userLocation,
-          radius: 1500,
-          rankBy: google.maps.places.RankBy.PROMINENCE,
+          bounds: {
+            east: ne.lng(),
+            west: sw.lng(),
+            north: ne.lat(),
+            south: sw.lat()
+          },
+          query: currentPlaceType || 'top places'
         };
-        if (currentPlaceType) request.keyword = currentPlaceType;
 
         const service = new google.maps.places.PlacesService(map);
-        service.nearbySearch(request, (results, status) => {
+        service.textSearch(request, (results, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
             allResults = results.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
             displayNextResults();
           } else {
-            console.warn("No places found or bad status");
+            console.warn("No places found or bad status", status);
           }
         });
       }
+
 
       function displayNextResults() {
         const listContainer = document.getElementById("places-list");
