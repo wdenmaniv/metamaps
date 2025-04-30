@@ -70,7 +70,6 @@ body {
   transition: box-shadow 0.2s ease;
 }
 
-
 #places-list .place-entry strong {
   font-size: 16px;
   font-weight: 600;
@@ -85,17 +84,6 @@ body {
 
 #places-list .place-entry:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-#places-list button {
-  margin-top: 12px;
-  padding: 10px 16px;
-  width: 100%;
-  font-size: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #f8f8f8;
-  cursor: pointer;
 }
 
 #show-more-btn {
