@@ -4,16 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MetaMaps MVP</title>
-    
-    <style>
-      #map {
-        height: 500px;
-        background-color: lightblue;
-      }
-    </style>
-    
     <link rel="stylesheet" href="styles.css" />
-
   </head>
   <body>
     <div id="universal-search">
@@ -25,7 +16,7 @@
       <button onclick="showMap()">Map</button>
       <button onclick="showList()">List</button>
     </div>
-    
+
     <div id="map"></div>
     <div id="places-list"></div>
     <div id="redo-search" onclick="redoSearch()">🔄 Redo Search in This Area</div>
@@ -58,8 +49,8 @@
             const location = results[0].geometry.location;
             map.setCenter(location);
             map.setZoom(14);
-            currentPlaceType = ''; 
-            runPlaceSearch(); 
+            currentPlaceType = '';
+            runPlaceSearch();
           } else {
             currentPlaceType = query;
             runPlaceSearch();
@@ -67,7 +58,7 @@
         });
       }
 
-      document.getElementById("search-input").addEventListener("keypress", function(e) {
+      document.getElementById("search-input").addEventListener("keypress", function (e) {
         if (e.key === "Enter") {
           runUnifiedSearch();
         }
@@ -83,12 +74,10 @@
         document.getElementById("map").classList.remove("show");
       }
 
-
       function redoSearch() {
-        runPlaceSearch(); // Uses latest map bounds + keyword
+        runPlaceSearch();
         document.getElementById("redo-search").style.opacity = 0;
       }
-
 
       function runPlaceSearch() {
         markers.forEach((marker) => marker.setMap(null));
@@ -117,7 +106,7 @@
 
             const request = {
               location,
-              radius: 1500, // ~1.5km per grid cell — adjust as needed
+              radius: 1500,
               keyword: currentPlaceType || "top places"
             };
 
@@ -133,7 +122,6 @@
 
               completedCalls++;
               if (completedCalls === totalCalls) {
-                // All grid cells fetched
                 allResults = Array.from(uniquePlaces.values()).sort(
                   (a, b) => b.user_ratings_total - a.user_ratings_total
                 );
@@ -144,8 +132,6 @@
         }
       }
 
-
-
       function displayNextResults() {
         const listContainer = document.getElementById("places-list");
         if (visibleCount === 0) listContainer.innerHTML = "";
@@ -155,7 +141,7 @@
           const marker = new google.maps.Marker({
             map,
             position: place.geometry.location,
-            title: `${place.name}`,
+            title: place.name,
           });
           markers.push(marker);
 
@@ -168,9 +154,10 @@
           });
 
           const placeDiv = document.createElement("div");
-          placeDiv.style.padding = "10px";
-          placeDiv.style.borderBottom = "1px solid #ccc";
-          placeDiv.innerHTML = `<strong>${place.name}</strong><br/>⭐ ${place.rating} (${place.user_ratings_total} reviews)`;
+          placeDiv.innerHTML = `
+            <strong>${place.name}</strong>
+            <span>⭐ ${place.rating} (${place.user_ratings_total} reviews)</span>
+          `;
           listContainer.appendChild(placeDiv);
         });
 
@@ -182,8 +169,6 @@
             const btn = document.createElement("button");
             btn.id = "show-more-btn";
             btn.textContent = "Show More";
-            btn.style.margin = "10px auto";
-            btn.style.display = "block";
             btn.onclick = displayNextResults;
             listContainer.appendChild(btn);
           }
@@ -191,7 +176,6 @@
           existingBtn.remove();
         }
       }
-
 
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
@@ -239,7 +223,6 @@
         if (window.innerWidth < 768) {
           showMap();
         } else {
-          // On desktop, show both
           document.getElementById("map").style.height = "60%";
           document.getElementById("places-list").style.height = "30%";
         }
@@ -262,6 +245,5 @@
       defer
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places,geometry&callback=initMap">
     </script>
-  
   </body>
 </html>
