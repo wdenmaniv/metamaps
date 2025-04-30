@@ -110,12 +110,51 @@
         cursor: pointer;
       }
 
+      #view-toggle {
+        display: none;
+        justify-content: space-around;
+        padding: 10px;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+      }
+
+      #view-toggle button {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        background: #f8f8f8;
+        cursor: pointer;
+      }
+
+      @media (max-width: 768px) {
+        #view-toggle {
+          display: flex;
+        }
+
+        #map, #places-list {
+          height: 70vh;
+          width: 100%;
+          display: none;
+        }
+
+        #map.show, #places-list.show {
+          display: block;
+        }
+      }
+
     </style>
   </head>
   <body>
     <div id="universal-search">
       <input type="text" id="search-input" placeholder="Try 'pizza', 'bars in Chicago', or 'parks'" />
       <button onclick="runUnifiedSearch()">Search</button>
+    
+    <div id="view-toggle">
+      <button onclick="showMap()">Map</button>
+      <button onclick="showList()">List</button>
+    </div>
+        
     </div>
     <div id="map"></div>
     <div id="places-list"></div>
@@ -163,6 +202,17 @@
           runUnifiedSearch();
         }
       });
+
+      function showMap() {
+        document.getElementById("map").classList.add("show");
+        document.getElementById("places-list").classList.remove("show");
+      }
+
+      function showList() {
+        document.getElementById("places-list").classList.add("show");
+        document.getElementById("map").classList.remove("show");
+      }
+
 
       function redoSearch() {
         const newCenter = map.getCenter();
@@ -253,26 +303,6 @@
         }
       }
 
-      function goToAddress() {
-        const address = document.getElementById("address").value;
-        if (!address) return;
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address }, (results, status) => {
-          if (status === "OK" && results[0]) {
-            const location = results[0].geometry.location;
-            map.setCenter(location);
-            map.setZoom(14);
-            const userLocation = {
-              lat: location.lat(),
-              lng: location.lng(),
-            };
-            currentCenter = userLocation;
-            runPlaceSearch(userLocation);
-          } else {
-            alert("Address not found.");
-          }
-        });
-      }
 
       function initMap() {
         const defaultLocation = { lat: 37.7749, lng: -122.4194 };
@@ -315,6 +345,14 @@
         } else {
           console.warn("Geolocation not supported.");
           runPlaceSearch(defaultLocation);
+        }
+
+        if (window.innerWidth < 768) {
+          showMap();
+        } else {
+          // On desktop, show both
+          document.getElementById("map").style.height = "60%";
+          document.getElementById("places-list").style.height = "30%";
         }
 
         google.maps.event.addListener(map, "dragend", () => {
