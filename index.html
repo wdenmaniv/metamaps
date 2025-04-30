@@ -91,19 +91,31 @@
         font-size: 14px;
         cursor: pointer;
       }
+      #universal-search {
+        display: flex;
+        padding: 10px;
+        gap: 8px;
+        font-family: sans-serif;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+      }
+      #universal-search input {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+      }
+      #universal-search button {
+        padding: 8px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
     </style>
   </head>
   <body>
-    <div id="address-search">
-      <input type="text" id="address" placeholder="Enter an address..." />
-      <button onclick="goToAddress()">Go</button>
-    </div>
-    <div id="filters">
-      <button onclick="updatePlaces('', this)">🧭 All</button>
-      <button onclick="updatePlaces('restaurant', this)">🍽 Restaurants</button>
-      <button onclick="updatePlaces('cafe', this)">☕ Cafés</button>
-      <button onclick="updatePlaces('park', this)">🌳 Parks</button>
-      <button onclick="updatePlaces('tourist_attraction', this)">📸 Attractions</button>
+    <div id="universal-search">
+      <input type="text" id="search-input" placeholder="Try 'pizza', 'bars in Chicago', or 'parks'" />
+      <button onclick="runUnifiedSearch()">Search</button>
     </div>
     <div id="map"></div>
     <div id="places-list"></div>
@@ -126,6 +138,31 @@
         allButtons.forEach((btn) => btn.classList.remove("active-filter"));
         button.classList.add("active-filter");
       }
+
+      function runUnifiedSearch() {
+        const query = document.getElementById("search-input").value;
+        if (!query) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: query }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            const location = results[0].geometry.location;
+            map.setCenter(location);
+            map.setZoom(14);
+            currentPlaceType = ''; 
+            runPlaceSearch(); 
+          } else {
+            currentPlaceType = query;
+            runPlaceSearch();
+          }
+        });
+      }
+
+      document.getElementById("search-input").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+          runUnifiedSearch();
+        }
+      });
 
       function redoSearch() {
         const newCenter = map.getCenter();
