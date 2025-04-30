@@ -166,7 +166,6 @@
       let allResults = [];
       let visibleCount = 0;
       let currentPlaceType = '';
-      let currentCenter;
 
       function updatePlaces(newType, button) {
         currentPlaceType = newType;
@@ -227,29 +226,28 @@
         visibleCount = 0;
 
         const bounds = map.getBounds();
-        const sw = bounds.getSouthWest();
+        const center = map.getCenter();
         const ne = bounds.getNorthEast();
 
-        console.log("Searching bounds:", map.getBounds().toString());
-        console.log("Search keyword:", currentPlaceType);
+        const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
+        console.log("📏 Calculated radius (m):", Math.floor(radius));
+        console.log("📍 Center:", center.toString());
+        console.log("🔑 Keyword:", currentPlaceType || "top places");
 
         const request = {
-          bounds: {
-            east: ne.lng(),
-            west: sw.lng(),
-            north: ne.lat(),
-            south: sw.lat()
-          },
-          query: currentPlaceType || 'top places'
+          location: center,
+          radius: radius,
+          keyword: currentPlaceType || "top places",
+          rankBy: google.maps.places.RankBy.PROMINENCE,
         };
 
         const service = new google.maps.places.PlacesService(map);
-        service.textSearch(request, (results, status) => {
+        service.nearbySearch(request, (results, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
             allResults = results.sort((a, b) => b.user_ratings_total - a.user_ratings_total);
             displayNextResults();
           } else {
-            console.warn("No places found or bad status", status);
+            console.warn("⚠️ No places found or bad status:", status);
           }
         });
       }
@@ -371,5 +369,6 @@
       defer
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIS76510vyTaZ7vHJnY42wcKtyyme_JTk&libraries=places&callback=initMap">
     </script>
+  
   </body>
 </html>
